@@ -53,7 +53,6 @@ class ApiConsumer(AsyncHttpConsumer):
             # Client closed connection on us mid request. Abort!
             return
         else:
-            # response = await self.get_response(request)
             try:
                 response = await self.get_response(request)
             except RaisedResponse as e:
