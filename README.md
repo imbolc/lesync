@@ -42,7 +42,7 @@ prefix.
 
 Request
 -------
-Subclass of from `channels.http.AsgiRequest` with:
+Subclass of `channels.http.AsgiRequest` with:
 
 - `json` attribute
 - `async load_user()` method - which returns standard django user
