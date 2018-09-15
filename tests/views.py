@@ -33,15 +33,15 @@ async def request_json(request):
 
 async def request_user(request):
     user = await request.load_user()
-    user = user if user.is_authenticated else None
+    user = user.username if user.is_authenticated else None
     return {'user': user}
 
 
 @login_required
 async def require_login(request):
-    return {'user': request.user}
+    return {'user': request.user.username}
 
 
 @staff_member_required
 async def require_staff(request):
-    return {'user': request.user}
+    return {'user': request.user.username}

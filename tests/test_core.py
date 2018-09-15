@@ -1,8 +1,9 @@
 import pytest
+
 from django.urls import path
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.sessions import SessionMiddlewareStack
-
+from django.contrib.auth import get_user_model
 
 from lesync import ApiConsumer
 from utils import HttpRequest
@@ -18,6 +19,18 @@ application = ProtocolTypeRouter({
 
 
 http = HttpRequest(application)
+
+
+@pytest.fixture
+def user():
+    return get_user_model().objects.get_or_create(
+        username='user', email='user@gmail.com')[0]
+
+
+@pytest.fixture
+def staff():
+    return get_user_model().objects.get_or_create(
+        username='staff', email='staff@gmail.com', is_staff=True)[0]
 
 
 @pytest.mark.asyncio
@@ -92,12 +105,39 @@ async def test_guest():
 
 
 @pytest.mark.asyncio
+async def test_user(user):
+    resp = await http.get('/request-user', user=user)
+    assert resp.status == 200
+    assert resp.json == {'user': 'user'}
+
+
+@pytest.mark.asyncio
 async def test_login_required_guest():
     resp = await http.get('/require-login')
     assert resp.status == 403
 
 
 @pytest.mark.asyncio
+async def test_login_required_user(user):
+    resp = await http.get('/require-login', user=user)
+    assert resp.status == 200
+    assert resp.json == {'user': 'user'}
+
+
+@pytest.mark.asyncio
 async def test_staff_required_guest():
     resp = await http.get('/require-staff')
     assert resp.status == 403
+
+
+@pytest.mark.asyncio
+async def test_staff_required_user(user):
+    resp = await http.get('/require-staff', user=user)
+    assert resp.status == 403
+
+
+@pytest.mark.asyncio
+async def test_staff_required_staff(staff):
+    resp = await http.get('/require-staff', user=staff)
+    assert resp.status == 200
+    assert resp.json == {'user': 'staff'}
