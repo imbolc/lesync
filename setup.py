@@ -11,7 +11,7 @@ if sys.argv[-1] == 'publish':
 
 setuptools.setup(
     name='lesync',
-    version='0.0.2',
+    version='0.0.3',
     description='Http helpers for django-channels',
     long_description=open('./README.md').read(),
     long_description_content_type='text/markdown',
