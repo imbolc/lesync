@@ -38,7 +38,7 @@ async def test_dict_response():
     resp = await http.get('/dict')
     assert resp.status == 200
     assert resp.json == {'hello': 'world'}
-    assert list(resp.headers) == [('Content-Type', 'application/json')]
+    assert list(resp.headers) == [(b'Content-Type', b'application/json')]
 
 
 @pytest.mark.asyncio
@@ -53,7 +53,7 @@ async def test_tuple3_response():
     resp = await http.get('/tuple3')
     assert resp.status == 400
     assert resp.json == {'bad': 'request'}
-    assert resp.get_header('Cache-Control') == 'no-cache'
+    assert resp.get_header(b'Cache-Control') == b'no-cache'
 
 
 @pytest.mark.asyncio
@@ -68,7 +68,7 @@ async def test_stream_response():
     resp = await http.get('/stream-response')
     assert resp.status == 200
     assert resp.text == '1,foo\n2,bar'
-    assert list(resp.headers) == [('Content-Type', 'text/csv')]
+    assert list(resp.headers) == [(b'Content-Type', b'text/csv')]
 
 
 @pytest.mark.asyncio

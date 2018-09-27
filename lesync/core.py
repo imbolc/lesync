@@ -11,6 +11,8 @@ from django import http, urls
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.utils.functional import cached_property
 
+from .utils import encoded_headers
+
 
 class RaisedResponse(Exception):
     def __init__(self, response):
@@ -58,7 +60,7 @@ class ApiConsumer(AsyncHttpConsumer):
             except RaisedResponse as e:
                 response = e.response
         if isinstance(response, StreamResponse):
-            await self.send_headers(headers=list(response.items()))
+            await self.send_headers(headers=encoded_headers(response))
             async for chunk in response.stream:
                 if isinstance(chunk, str):
                     chunk = chunk.encode('utf-8')
@@ -66,7 +68,7 @@ class ApiConsumer(AsyncHttpConsumer):
             await self.send_body(b'')
         else:
             await self.send_response(response.status_code, response.content,
-                                     headers=response.items())
+                                     headers=encoded_headers(response))
 
     async def get_response(self, request):
         try:
