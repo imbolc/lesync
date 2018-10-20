@@ -1,7 +1,8 @@
+*.py[co]
 __pycache__/
-*.py
 /*.egg-info
 /dist
+/build
 /.cache
 /.pytest_cache
 /.tests.sqlite

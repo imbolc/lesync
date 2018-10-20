@@ -90,6 +90,21 @@ async def hello(request):
 ```
 
 
+Request validation
+------------------
+You can use `@validate_query` and `@validate_json` decorators
+to validate requests data. They're using `trafaret` library to perform
+validation, so make sure it's installed.
+
+```python
+from lesync.trafaret import validate_json
+
+@validate_json({'ids': [int], 'hello?': str})
+async def foo(request):
+    return request.json
+```
+
+
 Tests
 -----
 ```bash

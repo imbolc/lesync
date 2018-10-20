@@ -2,6 +2,8 @@ from asyncio import sleep
 from django.http import HttpResponse
 from lesync import login_required, staff_member_required
 
+from lesync.trafaret import validate_query, validate_json
+
 
 async def dict_response(request):
     return {'hello': 'world'}
@@ -45,3 +47,13 @@ async def require_login(request):
 @staff_member_required
 async def require_staff(request):
     return {'user': request.user.username}
+
+
+@validate_query({'id': int})
+async def query_validation(request):
+    return dict(request.GET)
+
+
+@validate_json({'id': int})
+async def json_validation(request):
+    return request.json

@@ -12,4 +12,6 @@ urlpatterns = [
     path('request-user', views.request_user),
     path('require-login', views.require_login),
     path('require-staff', views.require_staff),
+    path('query-validation', views.query_validation),
+    path('json-validation', views.json_validation),
 ]
