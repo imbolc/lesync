@@ -51,7 +51,7 @@ async def require_staff(request):
 
 @validate_query({'id': int})
 async def query_validation(request):
-    return dict(request.GET)
+    return request.query
 
 
 @validate_json({'id': int})

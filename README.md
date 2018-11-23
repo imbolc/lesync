@@ -108,6 +108,8 @@ async def foo(request):
 Tests
 -----
 ```bash
+    python -m venv .venv
+    source .venv/bin/activate
     pip install -Ur requirements-dev.txt
     python -m pytest tests/
 ```

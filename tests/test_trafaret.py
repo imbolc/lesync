@@ -3,7 +3,6 @@ import pytest
 from django.urls import path
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.sessions import SessionMiddlewareStack
-from django.contrib.auth import get_user_model
 
 from lesync import ApiConsumer
 from utils import HttpRequest
@@ -33,7 +32,7 @@ async def test_query_validation():
     assert resp.json == {'errors': {'foo': 'foo is not allowed key'}}
     resp = await http.get('/query-validation?id=1')
     assert resp.status == 200
-    assert resp.json == {'id': ['1']}
+    assert resp.json == {'id': 1}
 
 
 @pytest.mark.asyncio
