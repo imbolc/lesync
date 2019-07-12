@@ -10,8 +10,14 @@ from channels.exceptions import RequestAborted, RequestTimeout
 from django import http, urls
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.utils.functional import cached_property
+from django.conf import settings
 
 from .utils import encoded_headers
+
+
+JSON_DUMPS_PARAMS = (
+    {"indent": 4, "ensure_ascii": False, "sort_keys": True} if settings.DEBUG else {}
+)
 
 
 class RaisedResponse(Exception):
@@ -25,10 +31,10 @@ class Request(AsgiRequest):
         try:
             return loads(self._body)
         except JSONDecodeError:
-            raise RaisedResponse(http.HttpResponseBadRequest('Broken json'))
+            raise RaisedResponse(http.HttpResponseBadRequest("Broken json"))
 
     async def load_user(self):
-        if not hasattr(self, 'user'):
+        if not hasattr(self, "user"):
             self.user = await get_user(self.scope)
         return self.user
 
@@ -38,7 +44,7 @@ class StreamResponse(dict):
         assert isinstance(stream, AsyncGeneratorType)
         self.stream = stream
         self.status_code = status_code
-        headers = headers or [('content-type', 'text/html')]
+        headers = headers or [("content-type", "text/html")]
         self.update(dict(headers))
 
 
@@ -49,8 +55,7 @@ class ApiConsumer(AsyncHttpConsumer):
         except UnicodeDecodeError:
             response = http.HttpResponseBadRequest()
         except RequestTimeout:
-            response = HttpResponse('408 Request Timeout (upload too slow)',
-                                    status=408)
+            response = HttpResponse("408 Request Timeout (upload too slow)", status=408)
         except RequestAborted:
             # Client closed connection on us mid request. Abort!
             return
@@ -63,18 +68,21 @@ class ApiConsumer(AsyncHttpConsumer):
             await self.send_headers(headers=encoded_headers(response))
             async for chunk in response.stream:
                 if isinstance(chunk, str):
-                    chunk = chunk.encode('utf-8')
+                    chunk = chunk.encode("utf-8")
                     await self.send_body(chunk, more_body=True)
-            await self.send_body(b'')
+            await self.send_body(b"")
         else:
-            await self.send_response(response.status_code, response.content,
-                                     headers=encoded_headers(response))
+            await self.send_response(
+                response.status_code,
+                response.content,
+                headers=encoded_headers(response),
+            )
 
     async def get_response(self, request):
         try:
             func, args, kwargs = urls.resolve(request.path)
         except urls.Resolver404:
-            data = {'error': 'Page not found'}, 404
+            data = {"error": "Page not found"}, 404
         else:
             data = await func(request, *args, **kwargs)
             if isinstance(data, (HttpResponse, StreamResponse)):
@@ -85,7 +93,9 @@ class ApiConsumer(AsyncHttpConsumer):
         payload, status, headers = self._normalize_response_tuple(data)
         if isinstance(payload, AsyncGeneratorType):
             return StreamResponse(payload, status, headers)
-        response = JsonResponse(payload, status=status)
+        response = JsonResponse(
+            payload, status=status, json_dumps_params=JSON_DUMPS_PARAMS
+        )
         for k, v in dict(headers).items():
             response[k] = v
         return response
@@ -95,7 +105,7 @@ class ApiConsumer(AsyncHttpConsumer):
         if isinstance(data, (dict, AsyncGeneratorType)):
             data = data, 200, []
         if len(data) == 2:
-            data += ([], )
+            data += ([],)
         assert len(data) == 3
         return data
 
@@ -105,8 +115,9 @@ def login_required(f):
     async def wrapper(request, *args, **kwargs):
         user = await request.load_user()
         if not user.is_authenticated:
-            return HttpResponseForbidden('You have to log in')
+            return HttpResponseForbidden("You have to log in")
         return await f(request, *args, **kwargs)
+
     return wrapper
 
 
@@ -115,6 +126,7 @@ def staff_member_required(f):
     @login_required
     async def wrapper(request, *args, **kwargs):
         if not request.user.is_staff:
-            return HttpResponseForbidden('Access denied')
+            return HttpResponseForbidden("Access denied")
         return await f(request, *args, **kwargs)
+
     return wrapper
