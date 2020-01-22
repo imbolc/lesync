@@ -1,23 +1,29 @@
+import sys
+import traceback
 from functools import wraps
-from json import loads, JSONDecodeError
+from io import BytesIO
+from json import JSONDecodeError, loads
+from logging import getLogger
 from types import AsyncGeneratorType
 
-from channels.generic.http import AsyncHttpConsumer
-from channels.auth import get_user
-from channels.http import AsgiRequest
-from channels.exceptions import RequestAborted, RequestTimeout
-
 from django import http, urls
-from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
-from django.utils.functional import cached_property
 from django.conf import settings
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.utils.functional import cached_property
+
+from channels.auth import get_user
+from channels.exceptions import RequestAborted, RequestTimeout
+from channels.generic.http import AsyncHttpConsumer
+from channels.http import AsgiRequest
 
 from .utils import encoded_headers
 
-
 JSON_DUMPS_PARAMS = (
-    {"indent": 4, "ensure_ascii": False, "sort_keys": True} if settings.DEBUG else {}
+    {"indent": 4, "ensure_ascii": False, "sort_keys": True}
+    if settings.DEBUG
+    else {}
 )
+log = getLogger(__name__)
 
 
 class RaisedResponse(Exception):
@@ -29,7 +35,7 @@ class Request(AsgiRequest):
     @cached_property
     def json(self):
         try:
-            return loads(self._body)
+            return loads(self.body)
         except JSONDecodeError:
             raise RaisedResponse(http.HttpResponseBadRequest("Broken json"))
 
@@ -51,11 +57,13 @@ class StreamResponse(dict):
 class ApiConsumer(AsyncHttpConsumer):
     async def handle(self, body):
         try:
-            request = Request(self.scope, body)
+            request = Request(self.scope, BytesIO(body))
         except UnicodeDecodeError:
             response = http.HttpResponseBadRequest()
         except RequestTimeout:
-            response = HttpResponse("408 Request Timeout (upload too slow)", status=408)
+            response = HttpResponse(
+                "408 Request Timeout (upload too slow)", status=408
+            )
         except RequestAborted:
             # Client closed connection on us mid request. Abort!
             return
@@ -64,6 +72,19 @@ class ApiConsumer(AsyncHttpConsumer):
                 response = await self.get_response(request)
             except RaisedResponse as e:
                 response = e.response
+            except Exception:
+                log.exception("Async handler error")
+                if settings.DEBUG:
+                    exc_traceback = sys.exc_info()[2]
+                    response = HttpResponse(
+                        "\n".join(traceback.format_tb(exc_traceback)[1:]),
+                        content_type="text/plain",
+                        status=500,
+                    )
+                else:
+                    response = self._to_response(
+                        ({"message": "Server Error"}, 500)
+                    )
         if isinstance(response, StreamResponse):
             await self.send_headers(headers=encoded_headers(response))
             async for chunk in response.stream:
@@ -82,7 +103,7 @@ class ApiConsumer(AsyncHttpConsumer):
         try:
             func, args, kwargs = urls.resolve(request.path)
         except urls.Resolver404:
-            data = {"error": "Page not found"}, 404
+            data = {"message": "Page not found"}, 404
         else:
             data = await func(request, *args, **kwargs)
             if isinstance(data, (HttpResponse, StreamResponse)):
