@@ -1,5 +1,9 @@
 Lesync
 ======
+
+**[Deprecated]** With native async-views support, introduced in Django-3.1,
+it's now deprecated in favor of [django-raw-api](https://github.com/imbolc/django-raw-api).
+
 Http helpers for `django-channels`
 
 Hello world
